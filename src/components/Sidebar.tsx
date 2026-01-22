@@ -2,13 +2,7 @@
 
 import { useSession, signOut } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-
-interface Chat {
-  id: string
-  title: string
-  updatedAt: string
-}
+import { getChats, deleteChat as deleteStoredChat, StoredChat } from '@/lib/storage'
 
 interface SidebarProps {
   currentChatId?: string
@@ -16,47 +10,30 @@ interface SidebarProps {
   onSelectChat: (chatId: string) => void
   isOpen: boolean
   onClose: () => void
+  refreshKey?: number
 }
 
-export function Sidebar({ currentChatId, onNewChat, onSelectChat, isOpen, onClose }: SidebarProps) {
+export function Sidebar({ currentChatId, onNewChat, onSelectChat, isOpen, onClose, refreshKey }: SidebarProps) {
   const { data: session } = useSession()
-  const [chats, setChats] = useState<Chat[]>([])
-  const [loading, setLoading] = useState(true)
+  const [chats, setChats] = useState<StoredChat[]>([])
 
   useEffect(() => {
-    if (session) {
-      loadChats()
-    }
-  }, [session])
+    loadChats()
+  }, [refreshKey])
 
-  const loadChats = async () => {
-    try {
-      const res = await fetch('/api/chats')
-      if (res.ok) {
-        const data = await res.json()
-        setChats(data)
-      }
-    } catch (error) {
-      console.error('Error loading chats:', error)
-    } finally {
-      setLoading(false)
-    }
+  const loadChats = () => {
+    const storedChats = getChats()
+    setChats(storedChats)
   }
 
-  const deleteChat = async (chatId: string, e: React.MouseEvent) => {
+  const handleDeleteChat = (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (!confirm('Удалить этот чат?')) return
 
-    try {
-      const res = await fetch(`/api/chats/${chatId}`, { method: 'DELETE' })
-      if (res.ok) {
-        setChats(chats.filter(c => c.id !== chatId))
-        if (currentChatId === chatId) {
-          onNewChat()
-        }
-      }
-    } catch (error) {
-      console.error('Error deleting chat:', error)
+    deleteStoredChat(chatId)
+    setChats(chats.filter(c => c.id !== chatId))
+    if (currentChatId === chatId) {
+      onNewChat()
     }
   }
 
@@ -80,7 +57,7 @@ export function Sidebar({ currentChatId, onNewChat, onSelectChat, isOpen, onClos
     }
     groups[dateLabel].push(chat)
     return groups
-  }, {} as Record<string, Chat[]>)
+  }, {} as Record<string, StoredChat[]>)
 
   return (
     <>
@@ -116,9 +93,7 @@ export function Sidebar({ currentChatId, onNewChat, onSelectChat, isOpen, onClos
 
         {/* Список чатов */}
         <div className="flex-1 overflow-y-auto p-2">
-          {loading ? (
-            <div className="text-center text-gray-400 py-4">Загрузка...</div>
-          ) : chats.length === 0 ? (
+          {chats.length === 0 ? (
             <div className="text-center text-gray-400 py-4 px-2">
               <p className="text-sm">История чатов пуста</p>
               <p className="text-xs mt-1">Начните новый диалог</p>
@@ -147,7 +122,7 @@ export function Sidebar({ currentChatId, onNewChat, onSelectChat, isOpen, onClos
                     </svg>
                     <span className="flex-1 truncate text-sm">{chat.title}</span>
                     <button
-                      onClick={(e) => deleteChat(chat.id, e)}
+                      onClick={(e) => handleDeleteChat(chat.id, e)}
                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-600 rounded transition"
                     >
                       <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,13 +170,4 @@ export function Sidebar({ currentChatId, onNewChat, onSelectChat, isOpen, onClos
       </aside>
     </>
   )
-}
-
-// Экспортируем функцию для обновления списка чатов
-export function useChatRefresh() {
-  return {
-    refresh: () => {
-      window.dispatchEvent(new CustomEvent('refresh-chats'))
-    }
-  }
 }
