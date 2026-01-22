@@ -271,7 +271,7 @@ function createDebtorNotice(data: DocumentData): Document {
 
 // Акт описи имущества
 function createPropertyInventory(data: DocumentData): Document {
-  const sections = [
+  const sections: (Paragraph | Table)[] = [
     createParagraph(`г. ${data.city || '_______________'}`, { alignment: AlignmentType.RIGHT }),
     createParagraph(formatDate(data.date as string), { alignment: AlignmentType.RIGHT }),
     createParagraph(''),
