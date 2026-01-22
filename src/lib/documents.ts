@@ -1,4 +1,4 @@
-≈import {
+import {
   Document,
   Paragraph,
   TextRun,
