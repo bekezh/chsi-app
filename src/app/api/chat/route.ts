@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import Anthropic from '@anthropic-ai/sdk'
 import { generateDocument, DocumentType } from '@/lib/documents'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 
 const SYSTEM_PROMPT = `Ты помощник частного судебного исполнителя в Казахстане. Помогаешь составлять документы и отвечаешь на вопросы по исполнительному производству.
 
@@ -60,7 +59,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { messages, chatId } = await request.json() as { messages: Message[], chatId?: string }
+    const { messages } = await request.json() as { messages: Message[] }
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
@@ -113,45 +112,6 @@ export async function POST(request: NextRequest) {
         console.error('Error generating document:', docError)
         // Если не удалось сгенерировать документ, просто возвращаем текст
       }
-    }
-
-    // Сохраняем сообщения в БД если есть chatId
-    if (chatId) {
-      const userMessage = messages[messages.length - 1]
-
-      // Сохраняем сообщение пользователя
-      await prisma.message.create({
-        data: {
-          chatId,
-          role: 'user',
-          content: userMessage.content,
-        },
-      })
-
-      // Сохраняем ответ ассистента
-      await prisma.message.create({
-        data: {
-          chatId,
-          role: 'assistant',
-          content: cleanContent,
-        },
-      })
-
-      // Обновляем название чата по первому сообщению
-      const chat = await prisma.chat.findUnique({ where: { id: chatId } })
-      if (chat?.title === 'Новый чат' && messages.length === 1) {
-        const title = userMessage.content.slice(0, 50) + (userMessage.content.length > 50 ? '...' : '')
-        await prisma.chat.update({
-          where: { id: chatId },
-          data: { title },
-        })
-      }
-
-      // Обновляем время последнего изменения
-      await prisma.chat.update({
-        where: { id: chatId },
-        data: { updatedAt: new Date() },
-      })
     }
 
     return NextResponse.json({
