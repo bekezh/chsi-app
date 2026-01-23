@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
+import { ProfileModal } from '@/components/ProfileModal'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -23,6 +24,7 @@ export default function Home() {
   const [currentChatId, setCurrentChatId] = useState<string | undefined>()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
@@ -190,7 +192,9 @@ export default function Home() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         refreshKey={refreshKey}
+        onOpenProfile={() => setProfileOpen(true)}
       />
+      <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
 
       <main className="flex-1 flex flex-col h-screen min-w-0">
         <header className="bg-white border-b px-4 py-3 flex items-center gap-3 shadow-sm">

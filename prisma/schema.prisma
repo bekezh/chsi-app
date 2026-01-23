@@ -41,6 +41,10 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  // Profile fields
+  displayName   String?   // Имя для обращения
+  position      String?   // Должность (ЧСИ, помощник и т.д.)
+  region        String?   // Регион деятельности
   accounts      Account[]
   sessions      Session[]
   chats         Chat[]

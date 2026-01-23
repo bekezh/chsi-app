@@ -5,7 +5,7 @@ import { generateDocument, DocumentType } from '@/lib/documents'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-const SYSTEM_PROMPT = `Ты помощник частного судебного исполнителя в Казахстане. Помогаешь составлять документы и отвечаешь на вопросы по исполнительному производству.
+const BASE_SYSTEM_PROMPT = `Ты помощник частного судебного исполнителя в Казахстане. Помогаешь составлять документы и отвечаешь на вопросы по исполнительному производству.
 
 Ты знаешь законодательство Республики Казахстан, в частности:
 - Закон РК "Об исполнительном производстве и статусе судебных исполнителей"
@@ -47,6 +47,33 @@ const SYSTEM_PROMPT = `Ты помощник частного судебного
 
 Всегда отвечай на русском языке.`
 
+interface UserProfile {
+  displayName: string | null
+  position: string | null
+  region: string | null
+}
+
+function buildSystemPrompt(profile: UserProfile): string {
+  let prompt = BASE_SYSTEM_PROMPT
+
+  const userInfo: string[] = []
+  if (profile.displayName) {
+    userInfo.push(`Имя пользователя: ${profile.displayName}`)
+  }
+  if (profile.position) {
+    userInfo.push(`Должность: ${profile.position}`)
+  }
+  if (profile.region) {
+    userInfo.push(`Регион деятельности: ${profile.region}`)
+  }
+
+  if (userInfo.length > 0) {
+    prompt += `\n\nИнформация о пользователе:\n${userInfo.join('\n')}\n\nОбращайся к пользователю по имени, если оно указано.`
+  }
+
+  return prompt
+}
+
 interface Message {
   role: 'user' | 'assistant'
   content: string
@@ -68,6 +95,18 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Получаем профиль пользователя
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        displayName: true,
+        position: true,
+        region: true,
+      },
+    })
+
+    const systemPrompt = buildSystemPrompt(user || { displayName: null, position: null, region: null })
 
     // Создаём или получаем чат
     let currentChatId = chatId
@@ -110,7 +149,7 @@ export async function POST(request: NextRequest) {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
