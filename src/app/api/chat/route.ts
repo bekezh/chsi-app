@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import Anthropic from '@anthropic-ai/sdk'
 import { generateDocument, DocumentType } from '@/lib/documents'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 const SYSTEM_PROMPT = `Ты помощник частного судебного исполнителя в Казахстане. Помогаешь составлять документы и отвечаешь на вопросы по исполнительному производству.
 
@@ -59,13 +60,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { messages } = await request.json() as { messages: Message[] }
+    const { messages, chatId } = await request.json() as { messages: Message[], chatId?: string }
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
         { error: 'API ключ не настроен. Добавьте ANTHROPIC_API_KEY в .env файл.' },
         { status: 500 }
       )
+    }
+
+    // Создаём или получаем чат
+    let currentChatId = chatId
+    if (!currentChatId) {
+      const chat = await prisma.chat.create({
+        data: {
+          userId: session.user.id,
+          title: 'Новый чат',
+        },
+      })
+      currentChatId = chat.id
+    }
+
+    // Сохраняем сообщение пользователя
+    const lastUserMessage = messages[messages.length - 1]
+    if (lastUserMessage && lastUserMessage.role === 'user') {
+      await prisma.message.create({
+        data: {
+          chatId: currentChatId,
+          role: 'user',
+          content: lastUserMessage.content,
+        },
+      })
+
+      // Обновляем название чата по первому сообщению
+      const chat = await prisma.chat.findUnique({ where: { id: currentChatId } })
+      if (chat && chat.title === 'Новый чат') {
+        const newTitle = lastUserMessage.content.slice(0, 40) + (lastUserMessage.content.length > 40 ? '...' : '')
+        await prisma.chat.update({
+          where: { id: currentChatId },
+          data: { title: newTitle },
+        })
+      }
     }
 
     const anthropic = new Anthropic({
@@ -110,14 +145,31 @@ export async function POST(request: NextRequest) {
         documentName = `${documentData.title || 'document'}.docx`
       } catch (docError) {
         console.error('Error generating document:', docError)
-        // Если не удалось сгенерировать документ, просто возвращаем текст
       }
     }
+
+    // Сохраняем ответ ассистента в базу
+    await prisma.message.create({
+      data: {
+        chatId: currentChatId,
+        role: 'assistant',
+        content: cleanContent,
+        documentUrl,
+        documentName,
+      },
+    })
+
+    // Обновляем время последнего изменения чата
+    await prisma.chat.update({
+      where: { id: currentChatId },
+      data: { updatedAt: new Date() },
+    })
 
     return NextResponse.json({
       content: cleanContent,
       documentUrl,
       documentName,
+      chatId: currentChatId,
     })
   } catch (error) {
     console.error('Chat API error:', error)

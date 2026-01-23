@@ -2,7 +2,12 @@
 
 import { useSession, signOut } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { getChats, deleteChat as deleteStoredChat, StoredChat } from '@/lib/storage'
+
+interface Chat {
+  id: string
+  title: string
+  updatedAt: string
+}
 
 interface SidebarProps {
   currentChatId?: string
@@ -15,25 +20,41 @@ interface SidebarProps {
 
 export function Sidebar({ currentChatId, onNewChat, onSelectChat, isOpen, onClose, refreshKey }: SidebarProps) {
   const { data: session } = useSession()
-  const [chats, setChats] = useState<StoredChat[]>([])
+  const [chats, setChats] = useState<Chat[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadChats()
   }, [refreshKey])
 
-  const loadChats = () => {
-    const storedChats = getChats()
-    setChats(storedChats)
+  const loadChats = async () => {
+    try {
+      const response = await fetch('/api/chats')
+      if (response.ok) {
+        const data = await response.json()
+        setChats(data)
+      }
+    } catch (error) {
+      console.error('Error loading chats:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleDeleteChat = (chatId: string, e: React.MouseEvent) => {
+  const handleDeleteChat = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (!confirm('Удалить этот чат?')) return
 
-    deleteStoredChat(chatId)
-    setChats(chats.filter(c => c.id !== chatId))
-    if (currentChatId === chatId) {
-      onNewChat()
+    try {
+      const response = await fetch(`/api/chats/${chatId}`, { method: 'DELETE' })
+      if (response.ok) {
+        setChats(chats.filter(c => c.id !== chatId))
+        if (currentChatId === chatId) {
+          onNewChat()
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting chat:', error)
     }
   }
 
@@ -57,7 +78,7 @@ export function Sidebar({ currentChatId, onNewChat, onSelectChat, isOpen, onClos
     }
     groups[dateLabel].push(chat)
     return groups
-  }, {} as Record<string, StoredChat[]>)
+  }, {} as Record<string, Chat[]>)
 
   return (
     <>
@@ -93,7 +114,11 @@ export function Sidebar({ currentChatId, onNewChat, onSelectChat, isOpen, onClos
 
         {/* Список чатов */}
         <div className="flex-1 overflow-y-auto p-2">
-          {chats.length === 0 ? (
+          {loading ? (
+            <div className="text-center text-gray-400 py-4">
+              <p className="text-sm">Загрузка...</p>
+            </div>
+          ) : chats.length === 0 ? (
             <div className="text-center text-gray-400 py-4 px-2">
               <p className="text-sm">История чатов пуста</p>
               <p className="text-xs mt-1">Начните новый диалог</p>

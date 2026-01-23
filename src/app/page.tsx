@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
-import { createChat, getChat, addMessageToChat, StoredMessage } from '@/lib/storage'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -87,11 +86,21 @@ export default function Home() {
     }
   }
 
-  const loadChat = (chatId: string) => {
-    const chat = getChat(chatId)
-    if (chat) {
-      setCurrentChatId(chatId)
-      setMessages(chat.messages)
+  const loadChat = async (chatId: string) => {
+    try {
+      const response = await fetch(`/api/chats/${chatId}`)
+      if (response.ok) {
+        const chat = await response.json()
+        setCurrentChatId(chatId)
+        setMessages(chat.messages.map((m: Message) => ({
+          role: m.role,
+          content: m.content,
+          documentUrl: m.documentUrl,
+          documentName: m.documentName,
+        })))
+      }
+    } catch (error) {
+      console.error('Error loading chat:', error)
     }
   }
 
@@ -106,20 +115,8 @@ export default function Home() {
     const userMessage = input.trim()
     setInput('')
 
-    // Создаём новый чат если нет текущего
-    let chatId = currentChatId
-    if (!chatId) {
-      const newChat = createChat()
-      chatId = newChat.id
-      setCurrentChatId(chatId)
-    }
-
     const userMsg: Message = { role: 'user', content: userMessage }
     setMessages(prev => [...prev, userMsg])
-
-    // Сохраняем сообщение пользователя
-    addMessageToChat(chatId, userMsg as StoredMessage)
-    setRefreshKey(prev => prev + 1)
 
     setIsLoading(true)
 
@@ -129,6 +126,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...messages, { role: 'user', content: userMessage }],
+          chatId: currentChatId,
         })
       })
 
@@ -136,6 +134,11 @@ export default function Home() {
 
       if (!response.ok) {
         throw new Error(data.error || 'Ошибка сервера')
+      }
+
+      // Обновляем chatId если был создан новый чат
+      if (data.chatId && !currentChatId) {
+        setCurrentChatId(data.chatId)
       }
 
       const assistantMsg: Message = {
@@ -146,9 +149,6 @@ export default function Home() {
       }
 
       setMessages(prev => [...prev, assistantMsg])
-
-      // Сохраняем ответ ассистента
-      addMessageToChat(chatId, assistantMsg as StoredMessage)
       setRefreshKey(prev => prev + 1)
     } catch (error) {
       console.error('Error:', error)

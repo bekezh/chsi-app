@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Account {
@@ -64,10 +65,12 @@ model Chat {
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  chatId    String
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  role      String   // 'user' or 'assistant'
-  content   String
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  chatId       String
+  chat         Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role         String   // 'user' or 'assistant'
+  content      String
+  documentUrl  String?
+  documentName String?
+  createdAt    DateTime @default(now())
 }
