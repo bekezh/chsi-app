@@ -4,8 +4,8 @@ import { signIn } from 'next-auth/react'
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-md w-full mx-4">
+    <main className="h-screen h-[100dvh] flex items-center justify-center bg-gradient-to-b from-gray-50 to-white overflow-hidden">
+      <div className="max-w-md w-full mx-4 px-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
           <div className="text-6xl mb-6">⚖️</div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">

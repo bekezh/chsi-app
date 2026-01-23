@@ -173,7 +173,7 @@ export default function Home() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="h-screen h-[100dvh] flex items-center justify-center bg-gray-100 overflow-hidden">
         <div className="text-gray-500">Загрузка...</div>
       </div>
     )
@@ -184,7 +184,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen h-[100dvh] bg-gray-100 overflow-hidden">
       <Sidebar
         currentChatId={currentChatId}
         onNewChat={handleNewChat}
@@ -196,7 +196,7 @@ export default function Home() {
       />
       <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
 
-      <main className="flex-1 flex flex-col h-screen min-w-0">
+      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         <header className="bg-white border-b px-4 py-3 flex items-center gap-3 shadow-sm">
           <button
             onClick={() => setSidebarOpen(true)}

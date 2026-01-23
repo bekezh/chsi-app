@@ -8,14 +8,22 @@
   --background-end-rgb: 255, 255, 255;
 }
 
-body {
+html, body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
     to bottom,
     rgb(var(--background-start-rgb)),
     rgb(var(--background-end-rgb))
   );
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Fix for mobile viewport height */
+@supports (height: 100dvh) {
+  html, body {
+    height: 100dvh;
+  }
 }
 
 /* Кастомный скроллбар */
