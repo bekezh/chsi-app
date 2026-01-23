@@ -16,14 +16,15 @@ html, body {
     rgb(var(--background-end-rgb))
   );
   height: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Fix for mobile viewport height */
-@supports (height: 100dvh) {
-  html, body {
-    height: 100dvh;
-  }
+/* Safe area insets for iOS */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Кастомный скроллбар */

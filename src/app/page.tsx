@@ -173,7 +173,7 @@ export default function Home() {
 
   if (status === 'loading') {
     return (
-      <div className="h-screen h-[100dvh] flex items-center justify-center bg-gray-100 overflow-hidden">
+      <div className="flex items-center justify-center bg-gray-100 fixed inset-0">
         <div className="text-gray-500">Загрузка...</div>
       </div>
     )
@@ -184,7 +184,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen h-[100dvh] bg-gray-100 overflow-hidden">
+    <div className="flex bg-gray-100 fixed inset-0">
       <Sidebar
         currentChatId={currentChatId}
         onNewChat={handleNewChat}
@@ -304,7 +304,7 @@ export default function Home() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="border-t bg-white p-3 md:p-4">
+        <div className="border-t bg-white p-3 md:p-4 pb-safe">
           <div className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto">
             <button
               onClick={toggleRecording}
