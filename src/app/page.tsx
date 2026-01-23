@@ -304,7 +304,7 @@ export default function Home() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="border-t bg-white p-3 md:p-4 pb-safe">
+        <div className="border-t bg-white px-3 py-2 md:px-4 md:py-3">
           <div className="flex items-end gap-2 md:gap-3 max-w-4xl mx-auto">
             <button
               onClick={toggleRecording}
